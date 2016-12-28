@@ -16,7 +16,7 @@ glLedgerLinks <- links[grepl("https://s3.amazonaws.com/fortcollins-opendata/gene
 
 data <- fromJSON(glLedgerLinks[1])
 
-for(i in 1:length(glLedgerLinks)){
+for(i in 2:length(glLedgerLinks)){
   data <- bind_rows(data, fromJSON(glLedgerLinks[i]))
 }
 
