@@ -1,2 +1,2 @@
-source(cleaningData.R)
-source(analyzingData.R)
+source("cleaningData.R")
+source("analyzingData.R")
