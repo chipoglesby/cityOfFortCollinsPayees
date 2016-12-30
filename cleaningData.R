@@ -10,9 +10,9 @@ fetchAndCleanData = function(){
     html_nodes('a') %>%
     html_attr('href')
   
-  glServiceArea <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/glservicearea.json")
-  glFund <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/glfund.json")
-  glDepartment <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/gldepartment.json")
+  glServiceAreaLink <- "https://s3.amazonaws.com/fortcollins-opendata/glservicearea.json"
+  glFundLink <- "https://s3.amazonaws.com/fortcollins-opendata/glfund.json"
+  glDepartmentLink <- "https://s3.amazonaws.com/fortcollins-opendata/gldepartment.json"
   glLedgerLinks <- links[grepl("https://s3.amazonaws.com/fortcollins-opendata/generalledger-",links) == TRUE]
   
   data <- fromJSON(glLedgerLinks[1])
@@ -40,14 +40,6 @@ fetchAndCleanData = function(){
   
   data$glvisadesc <- NULL
   data$glvisacardholder <- NULL
-  
-  library(gdata)
-  data = merge(data,glServiceArea,by.x='glserviceareaid',by.y='SERVICEAREAID')
-  data$SERVICEAREANAME = trim(data$SERVICEAREANAME,'right')
-  data = merge(data,glFund,by.x='glfund',by.y='GLFUND')
-  data$GLFUND = trim(data$GLFUND,'right')
-  data = merge(data,glDepartment,by.x='gldeptno',by.y='DEPTNO')
-  data$DEPTNAME = trim(data$DEPTNAME,'right')
   
   return(data)
 }
