@@ -6,7 +6,7 @@ data <- fetchAndCleanData()
 data$year <-year(data$gldate)
 data$month <- month(data$gldate, label = TRUE)
 data$day <- day(data$gldate)
-data$dayOfWeek <-  wday(data$gldate, label = TRUE)
+data$dayOfWeek <- wday(data$gldate, label = TRUE)
 
 ## What Days of the Month are the Checks Cut?
 dayPlot <- ggplot(data, aes(day, fill = month)) +
