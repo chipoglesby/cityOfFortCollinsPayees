@@ -151,3 +151,58 @@ plot(data$gldate,data$glamount)
 df = data %>% group_by(year,glfund) %>% summarise(payments = sum(glamount))
 p = ggplot(df,aes(x=year,y=payments))
 p + geom_bar(stat='identity') + facet_wrap(~glfund)
+
+
+df = data %>%
+  group_by(SERVICEAREANAME) %>%
+  summarise(payments = sum(glamount))
+p = ggplot(df,aes(x=reorder(SERVICEAREANAME,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+
+
+
+
+df = data %>%
+  group_by(DEPTNAME) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(50)
+p = ggplot(df,aes(x=reorder(DEPTNAME,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+
+
+df = data %>%
+  group_by(GLFUND) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments))
+p = ggplot(df,aes(x=reorder(GLFUND,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+
+df = data %>%
+  filter(GLFUND == 'Golf Fund') %>%
+  group_by(glvendor) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(25)
+p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+
+df = data %>%
+  filter(GLFUND == 'Keep Fort Collins Great Fund') %>%
+  group_by(glvendor) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments))
+p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+
+
+df = data %>%
+  filter(DEPTNAME == 'Patrol') %>%
+  group_by(glvendor) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(30)
+p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
+p + geom_bar(stat='identity') + coord_flip()
+#Scandal with #1 paid vendor = redflex traffic systems
+#http://www.chicagotribune.com/news/watchdog/redlight/ct-red-light-cameras-ceo-guilty-met-20150819-story.html
