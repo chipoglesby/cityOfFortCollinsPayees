@@ -1,6 +1,7 @@
 source("cleaningData.R")
 library(ggplot2)
 library(lubridate)
+library(dplyr)
 
 data = fetchAndCleanData()
 data$year = year(data$gldate)
@@ -12,6 +13,12 @@ data$dayOfWeek = wday(data$gldate,label=TRUE)
 p = ggplot(data, aes(day, fill = month))
 p + geom_density(alpha = 0.5)
 #Looks like the end of the month - overwhelmingly
+
+##What Days of the Week are the Checks Cut?
+p = ggplot(data, aes(dayOfWeek))
+p + geom_bar()#geom_density(alpha = 0.5)
+#Almost everything happens during a weekday (not surprising)
+#Thursday is oddly low and Friday oddly high...
 
 #Who Were the Top Vendors of 2015?
 vendorSummary <- data %>% group_by(glvendor) %>%
@@ -83,12 +90,7 @@ vendorTop10 <- top_n(vendorSummary, 100, payments)
 p = ggplot(vendorTop10,aes(x=reorder(glvendor,payments),y=payments))
 p + geom_bar(stat='identity') + coord_flip() + labs(title='Average Payments to Vendor')
 
-plot(data$gldate,data$glamount)
-
-
-df = data %>% group_by(year,glfund) %>% summarise(payments = sum(glamount))
-p = ggplot(df,aes(x=year,y=payments))
-p + geom_bar(stat='identity') + facet_wrap(~glfund)
+#plot(data$gldate,data$glamount)
 
 
 df = data %>%
@@ -125,13 +127,13 @@ df = data %>%
 p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
 p + geom_bar(stat='identity') + coord_flip()
 
-df = data %>%
-  filter(GLFUND == 'Keep Fort Collins Great Fund') %>%
-  group_by(glvendor) %>%
-  summarise(payments = sum(glamount)) %>%
-  arrange(desc(payments))
-p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
-p + geom_bar(stat='identity') + coord_flip()
+# df = data %>%
+#   filter(GLFUND == 'Keep Fort Collins Great Fund') %>%
+#   group_by(glvendor) %>%
+#   summarise(payments = sum(glamount)) %>%
+#   arrange(desc(payments))
+# p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
+# p + geom_bar(stat='identity') + coord_flip()
 
 
 df = data %>%
@@ -144,3 +146,5 @@ p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments))
 p + geom_bar(stat='identity') + coord_flip()
 #Scandal with #1 paid vendor = redflex traffic systems
 #http://www.chicagotribune.com/news/watchdog/redlight/ct-red-light-cameras-ceo-guilty-met-20150819-story.html
+
+
