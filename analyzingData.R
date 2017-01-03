@@ -3,7 +3,8 @@ library(ggplot2)
 library(lubridate)
 library(dplyr)
 
-data = fetchAndCleanData()
+
+#data = fetchAndCleanData()
 data$year = year(data$gldate)
 data$month = month(data$gldate,label=TRUE)
 data$day = day(data$gldate)
