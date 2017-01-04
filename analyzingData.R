@@ -16,14 +16,14 @@ p + geom_density(alpha = 0.5)
 #Looks like the end of the month - overwhelmingly
 
 ##What Days of the Week are the Checks Cut?
-p = ggplot(data, aes(dayOfWeek))
-p + geom_bar()#geom_density(alpha = 0.5)
+p = ggplot(data, aes(dayOfWeek,fill=factor(year),col=factor(year)))
+p + geom_bar(position='dodge')#geom_density(alpha = 0.5)
 #Almost everything happens during a weekday (not surprising)
 #Thursday is oddly low and Friday oddly high...
+#Weirdly the trend was both years and Tuesday grew in 2015 and dropped even beyond 2014 on Thursdays
 
-#Who Were the Top Vendors of 2015?
-vendorSummary <- data %>% group_by(glvendor) %>%
-  filter(year == 2015) %>%
+#Who Were the Top Vendors?
+vendorSummary = data %>% group_by(glvendor) %>%
   summarize(
     payments = sum(glamount), 
     count = length(glvendor),
@@ -38,7 +38,7 @@ p + geom_bar(stat='identity') + coord_flip() + labs(title='Average Payments to V
 
 
 #Top Explanations for 2015 + 2015
-explanationSummary <- data %>% group_by(glexplanation) %>%
+explanationSummary = data %>% group_by(glexplanation) %>%
   summarize(
     payments = sum(glamount), 
     count = length(glexplanation),
@@ -54,7 +54,7 @@ p + geom_bar(stat='identity') + coord_flip() + labs(title='Average Payments by E
 
 
 #Top Explanations for 2015 + 2015
-explanationSummary <- data %>% 
+explanationSummary = data %>% 
   filter(grepl('energy purchases',glexplanation) == FALSE) %>% 
   group_by(glexplanation) %>%
   summarize(
@@ -68,7 +68,7 @@ explanationSummary <- data %>%
 head(explanationSummary,15)
 tail(explanationSummary,25)
 
-explanationTop10 <- top_n(explanationSummary, 50, payments)
+explanationTop10 = top_n(explanationSummary, 10, payments)
 
 p = ggplot(explanationTop10,aes(x=reorder(glexplanation,payments),y=payments))
 p + geom_bar(stat='identity') + coord_flip() + labs(title='Payments by Explanation')
@@ -78,7 +78,7 @@ a = data[data$glexplanation=='educational programs',]
 a = a[is.na(a)==FALSE,]
 
 #Who Were the Top Vendors of 2015?
-vendorSummary <- a %>% group_by(glvendor) %>%
+vendorSummary = a %>% group_by(glvendor) %>%
   summarize(
     payments = sum(glamount), 
     count = length(glvendor),
@@ -86,7 +86,7 @@ vendorSummary <- a %>% group_by(glvendor) %>%
       round(sum(glamount)/ length(glvendor),2)) %>%
   arrange(desc(averagePayment))
 
-vendorTop10 <- top_n(vendorSummary, 100, payments)
+vendorTop10 <- top_n(vendorSummary, 10, payments)
 
 p = ggplot(vendorTop10,aes(x=reorder(glvendor,payments),y=payments))
 p + geom_bar(stat='identity') + coord_flip() + labs(title='Average Payments to Vendor')
