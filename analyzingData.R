@@ -2,7 +2,7 @@ source("cleaningData.R")
 library(ggplot2)
 library(lubridate)
 library(dplyr)
-
+library(scales)
 
 #data = fetchAndCleanData()
 data$year = year(data$gldate)
@@ -12,12 +12,14 @@ data$dayOfWeek = wday(data$gldate,label=TRUE)
 
 ##What Days of the Month are the Checks Cut?
 p = ggplot(data, aes(day, fill = month))
-p + geom_density(alpha = 0.5)
+p + geom_density(alpha = 0.5) + scale_y_continuous(name="% of Payments by Day of Month", labels = percent) + ggtitle('Payments by Day of Month')
 #Looks like the end of the month - overwhelmingly
 
 ##What Days of the Week are the Checks Cut?
 p = ggplot(data, aes(dayOfWeek,fill=factor(year),col=factor(year)))
-p + geom_bar(position='dodge')#geom_density(alpha = 0.5)
+p + geom_bar(position='dodge') + scale_y_continuous(name="Payment Count", labels = comma)
+
+#geom_density(alpha = 0.5)
 #Almost everything happens during a weekday (not surprising)
 #Thursday is oddly low and Friday oddly high...
 #Weirdly the trend was both years and Tuesday grew in 2015 and dropped even beyond 2014 on Thursdays

@@ -1,0 +1,85 @@
+
+# City of Fort Collins Spending Analysis
+
+```{r results='hide', warning=FALSE, message=FALSE}
+source("cleaningData.R")
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(scales)
+```
+
+Use the custom function to fetch, clean, and merge the data.
+```{r cache=TRUE}
+data = fetchAndCleanData()
+data$year = year(data$gldate)
+data$month = month(data$gldate,label=TRUE)
+data$day = day(data$gldate)
+data$dayOfWeek = wday(data$gldate,label=TRUE)
+```
+
+When are vendors being paid by the City of Fort Collins? 
+
+* The overwhelming majority of payments are made at the end of the month
+* This is not affected by the year or the month
+* In January and February, between 15-20% of the payments were on the final day of the month
+* Almost all payments are made during the week (again, no surprise)
+* Strangely, Thursday seems to have fewer payments than other days 
+  * It is substantially lower than other days in both years
+  * However, there is a relatively simple explanation: the end of the month happened either on those days, or that was the final day before the weekend
+  * For example, Friday would have been the final business day of the month in 6 out of 12 months of 2014
+
+```{r}
+p = ggplot(data, aes(day, fill = factor(year)))
+
+p + geom_bar(position='dodge') +
+  scale_y_continuous(name="Daily Payments",
+                     labels = comma) +
+  ggtitle('Payments by Day of Month') + 
+  scale_fill_discrete(name = "Year")
+```
+
+```{r}
+p = ggplot(data, aes(day, fill = month))
+p + geom_density(alpha = 0.5) +
+  scale_y_continuous(name="% of Payments by Day of Month",
+                     labels = percent) +
+  ggtitle('Payments by Day of Month')
+```
+
+
+```{r}
+p = ggplot(data, aes(dayOfWeek,fill=factor(year)))
+p + geom_bar(position='dodge') + 
+  scale_y_continuous(name="Payment Count", 
+                     labels = comma) +
+  scale_fill_discrete(name = "Year") + 
+  ggtitle('Payments by Day of the Week - 2014 vs 2015') + 
+  theme(legend.position='bottom')
+```
+
+
+Over the two year period, which vendors received the highest average payments?  
+
+```{r}
+vendorSummary = data %>% group_by(glvendor) %>%
+  summarize(
+    payments = sum(glamount), 
+    count = length(glvendor),
+    averagePayment = 
+      round(sum(glamount)/ length(glvendor),2)) %>%
+  arrange(desc(averagePayment))
+
+vendorTop10 = top_n(vendorSummary, 10, payments)
+
+p = ggplot(vendorTop10,
+           aes(x=reorder(glvendor,averagePayment),
+               y=averagePayment))
+p + geom_bar(stat='identity') + 
+  coord_flip() + 
+  labs(title='Average Payments to Vendor',x='') + 
+  scale_y_continuous(name="", 
+                     labels = dollar)
+
+```
+
