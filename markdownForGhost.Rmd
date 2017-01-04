@@ -1,6 +1,10 @@
 
 # City of Fort Collins Spending Analysis
 
+I reside in Fort Collins, CO and had a desire to see what public information was available via public resources. The City of Fort Collins had an open data initiative which published spending data for 2014 & 2015.  
+
+The data was surprisingly clean and laid out in JSON format on Amazon S3. This post shows my exploration of the data along with some observations.
+
 ```{r results='hide', warning=FALSE, message=FALSE}
 source("cleaningData.R")
 library(ggplot2)
@@ -9,7 +13,9 @@ library(dplyr)
 library(scales)
 ```
 
-Use the custom function to fetch, clean, and merge the data.
+I created a custom function to fetch, clean, and merge the data (code given at the end of this post).
+
+The data is from [The City of Fort Collins Website](http://www.fcgov.com/opendata/)
 ```{r cache=TRUE}
 data = fetchAndCleanData()
 data$year = year(data$gldate)
@@ -18,13 +24,13 @@ data$day = day(data$gldate)
 data$dayOfWeek = wday(data$gldate,label=TRUE)
 ```
 
-When are vendors being paid by the City of Fort Collins? 
+###When are vendors being paid by the City of Fort Collins? 
 
-* The overwhelming majority of payments are made at the end of the month
-* This is not affected by the year or the month
-* In January and February, between 15-20% of the payments were on the final day of the month
-* Almost all payments are made during the week (again, no surprise)
-* Strangely, Thursday seems to have fewer payments than other days 
+* The overwhelming majority of payments are made at the end of the month ***Fig. 1 & 2***
+* This is not affected by the year or the month ***Fig. 1 & 2***
+* In January and February, between 15-20% of the payments were on the final day of the month ***Fig. 2***
+* Almost all payments are made during the week (no surprise there) ***Fig. 3***
+  * Strangely, Thursday seems to have fewer payments than other days 
   * It is substantially lower than other days in both years
   * However, there is a relatively simple explanation: the end of the month happened either on those days, or that was the final day before the weekend
   * For example, Friday would have been the final business day of the month in 6 out of 12 months of 2014
@@ -35,7 +41,7 @@ p = ggplot(data, aes(day, fill = factor(year)))
 p + geom_bar(position='dodge') +
   scale_y_continuous(name="Daily Payments",
                      labels = comma) +
-  ggtitle('Payments by Day of Month') + 
+  ggtitle('Fig 1. Payments by Day of Month') + 
   scale_fill_discrete(name = "Year")
 ```
 
@@ -44,7 +50,7 @@ p = ggplot(data, aes(day, fill = month))
 p + geom_density(alpha = 0.5) +
   scale_y_continuous(name="% of Payments by Day of Month",
                      labels = percent) +
-  ggtitle('Payments by Day of Month')
+  ggtitle('Fig 2. Payments by Day of Month')
 ```
 
 
@@ -54,15 +60,77 @@ p + geom_bar(position='dodge') +
   scale_y_continuous(name="Payment Count", 
                      labels = comma) +
   scale_fill_discrete(name = "Year") + 
-  ggtitle('Payments by Day of the Week - 2014 vs 2015') + 
+  ggtitle('Fig 3. Payments by Day of the Week 2014 vs 2015') + 
   theme(legend.position='bottom')
 ```
 
 
-Over the two year period, which vendors received the highest average payments?  
+##What Departments Spent the Most?  
+
+* L&P Operations Service Unit spent almost $100M each year!
+  * That's roughly 4x the next highest spending department (Engineering)
 
 ```{r}
-vendorSummary = data %>% group_by(glvendor) %>%
+df = data %>%
+  group_by(year,DEPTNAME) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(10)
+p = ggplot(df,aes(x=reorder(DEPTNAME,payments),y=payments,fill=factor(year)))
+p + geom_bar(stat='identity',position='dodge') + 
+  labs(title='Fig 4. Spending By Department - Top 10',x='') + 
+  scale_y_continuous(name="", 
+                     labels = dollar) + 
+  scale_fill_discrete(name = "Year") + 
+  coord_flip()
+  
+```
+
+
+##What was L&P Operations Service Unit spending so much money on?  
+
+* Almost all of the money goes to Platte River Power Authority
+  * This makes a lot of sense, afterall, L&P stands for Light & Power!
+* After removing this outlier, the rest of the data is easier to visualize
+  * The most interesting observation: "fountain, city of" cost over $1.25M!
+
+```{r}
+df = data %>%
+  filter(DEPTNAME == 'L&P Operations Service Unit') %>%
+  group_by(year,glvendor) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(10)
+p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments,fill=factor(year)))
+p + geom_bar(stat='identity',position='dodge') + 
+  labs(title='Fig 5. Spending By Vendor - Top 10',x='') + 
+  scale_y_continuous(name="", 
+                     labels = dollar) + 
+  scale_fill_discrete(name = "Year") + coord_flip()
+```
+
+
+```{r}
+df = data %>%
+  filter(DEPTNAME == 'L&P Operations Service Unit') %>%
+  filter(glvendor != 'platte river power authority (') %>%
+  group_by(year,glvendor) %>%
+  summarise(payments = sum(glamount)) %>%
+  arrange(desc(payments)) %>%
+  top_n(10)
+p = ggplot(df,aes(x=reorder(glvendor,payments),y=payments,fill=factor(year)))
+p + geom_bar(stat='identity',position='dodge') + 
+  labs(title='Fig 5. Spending By Vendor - Top 10',x='') + 
+  scale_y_continuous(name="", 
+                     labels = dollar) + 
+  scale_fill_discrete(name = "Year") + coord_flip()
+```
+
+
+##Which vendors received the highest average payments?  
+
+```{r}
+vendorSummary = data %>% group_by(year,glvendor) %>%
   summarize(
     payments = sum(glamount), 
     count = length(glvendor),
@@ -74,12 +142,14 @@ vendorTop10 = top_n(vendorSummary, 10, payments)
 
 p = ggplot(vendorTop10,
            aes(x=reorder(glvendor,averagePayment),
-               y=averagePayment))
-p + geom_bar(stat='identity') + 
+               y=averagePayment,fill=factor(year)))
+p + geom_bar(stat='identity',position='dodge') + 
   coord_flip() + 
-  labs(title='Average Payments to Vendor',x='') + 
+  labs(title='Fig 6. Average Payments to Vendor - Top 10',x='') + 
   scale_y_continuous(name="", 
-                     labels = dollar)
+                     labels = dollar) + 
+  scale_fill_discrete(name = "Year") + coord_flip()
 
 ```
+
 

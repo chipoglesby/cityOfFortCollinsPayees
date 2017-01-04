@@ -109,10 +109,13 @@ df = data %>%
   group_by(DEPTNAME) %>%
   summarise(payments = sum(glamount)) %>%
   arrange(desc(payments)) %>%
-  top_n(50)
+  top_n(20)
 p = ggplot(df,aes(x=reorder(DEPTNAME,payments),y=payments))
-p + geom_bar(stat='identity') + coord_flip()
-
+p + geom_bar(stat='identity') + 
+  labs(title='Fig 4. Spending By Department - Top 20',x='') + 
+  scale_y_continuous(name="", 
+                     labels = dollar) + 
+  coord_flip()
 
 df = data %>%
   group_by(GLFUND) %>%
