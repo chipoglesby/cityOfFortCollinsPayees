@@ -1,11 +1,8 @@
-
-# City of Fort Collins Spending Analysis
-
 I reside in Fort Collins, CO and had a desire to see what public information was available via public resources. The City of Fort Collins had an open data initiative which published spending data for 2014 & 2015.  
 
 The data was surprisingly clean and laid out in JSON format on Amazon S3. This post shows my exploration of the data along with some observations.
 
-```{r results='hide', warning=FALSE, message=FALSE}
+```language-r
 source("cleaningData.R")
 library(ggplot2)
 library(lubridate)
@@ -16,7 +13,7 @@ library(scales)
 I created a custom function to fetch, clean, and merge the data (code given at the end of this post).
 
 The data is from [The City of Fort Collins Website](http://www.fcgov.com/opendata/)
-```{r cache=TRUE}
+```language-r
 data = fetchAndCleanData()
 data$year = year(data$gldate)
 data$month = month(data$gldate,label=TRUE)
@@ -35,7 +32,13 @@ data$dayOfWeek = wday(data$gldate,label=TRUE)
   * However, there is a relatively simple explanation: the end of the month happened either on those days, or that was the final day before the weekend
   * For example, Friday would have been the final business day of the month in 6 out of 12 months of 2014
 
-```{r}
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-3-1.png)
+
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-4-1.png)
+
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-5-1.png)
+
+```language-r
 p = ggplot(data, aes(day, fill = factor(year)))
 
 p + geom_bar(position='dodge') +
@@ -45,7 +48,7 @@ p + geom_bar(position='dodge') +
   scale_fill_discrete(name = "Year")
 ```
 
-```{r}
+```language-r
 p = ggplot(data, aes(day, fill = month))
 p + geom_density(alpha = 0.5) +
   scale_y_continuous(name="% of Payments by Day of Month",
@@ -54,7 +57,7 @@ p + geom_density(alpha = 0.5) +
 ```
 
 
-```{r}
+```language-r
 p = ggplot(data, aes(dayOfWeek,fill=factor(year)))
 p + geom_bar(position='dodge') + 
   scale_y_continuous(name="Payment Count", 
@@ -70,7 +73,8 @@ p + geom_bar(position='dodge') +
 * L&P Operations Service Unit spent almost $100M each year!
   * That's roughly 4x the next highest spending department (Engineering)
 
-```{r}
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-6-1.png)
+```language-r
 df = data %>%
   group_by(year,DEPTNAME) %>%
   summarise(payments = sum(glamount)) %>%
@@ -94,7 +98,10 @@ p + geom_bar(stat='identity',position='dodge') +
 * After removing this outlier, the rest of the data is easier to visualize
   * The most interesting observation: "fountain, city of" cost over $1.25M!
 
-```{r}
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-7-1.png)
+
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-8-1.png)
+```language-r
 df = data %>%
   filter(DEPTNAME == 'L&P Operations Service Unit') %>%
   group_by(year,glvendor) %>%
@@ -110,7 +117,7 @@ p + geom_bar(stat='identity',position='dodge') +
 ```
 
 
-```{r}
+```language-r
 df = data %>%
   filter(DEPTNAME == 'L&P Operations Service Unit') %>%
   filter(glvendor != 'platte river power authority (') %>%
@@ -132,8 +139,8 @@ p + geom_bar(stat='identity',position='dodge') +
 * The Platte River Power Authority ranks number one
 * New Flyer of America came in second
   * This is where the MAX buses were purchased from
-
-```{r}
+![plot](https://www.stoltzmaniac.com/content/images/2017/01/city-of-fort-collins-spending-analysis/unnamed-chunk-9-1.png)
+```language-r
 vendorSummary = data %>% group_by(year,glvendor) %>%
   summarize(
     payments = sum(glamount), 
@@ -168,7 +175,7 @@ After diving into a few different departments and finding relatively unremarkabl
   * The financial return on these cameras is constantly being scrutinized in the US - [News Article](http://www.coloradoan.com/story/news/2015/02/28/colorado-debate-red-light-speed-cameras-worth/24209831/) - the costs associated with the cameras are relatively high
   * Chicago (among others) are questioning how effective these cameras are at reducing accidents [News Article](http://www.chicagotribune.com/ct-red-light-camera-safety-met-20141219-story.html#page=1)
   
-```{r}
+```language-r
 df = data %>%
   filter(DEPTNAME == 'Patrol') %>%
   group_by(glvendor) %>%
@@ -192,3 +199,60 @@ p + geom_bar(stat='identity') +
 * Spending on schools and education has been a big topic in Fort Collins, I'll attempt to find changes in this as we move forward and the data is updated
 
 Code used in this post is on my [GitHub](https://github.com/stoltzmaniac/cityOfFortCollinsPayees)
+
+The fetchAndCleanData() function is below.
+```language-r
+library(rvest)
+library(jsonlite)
+library(gdata)
+library(dplyr)
+
+fetchAndCleanData = function(){
+  landingPage <- read_html("http://www.fcgov.com/opendata/")
+  
+  links <- landingPage %>%
+    html_nodes('a') %>%
+    html_attr('href')
+  
+  glServiceArea <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/glservicearea.json")
+  glFund <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/glfund.json")
+  glDepartment <- fromJSON("https://s3.amazonaws.com/fortcollins-opendata/gldepartment.json")
+  glLedgerLinks <- links[grepl("https://s3.amazonaws.com/fortcollins-opendata/generalledger-",links) == TRUE]
+  
+  data <- fromJSON(glLedgerLinks[1])
+  
+  for(i in 2:length(glLedgerLinks)){
+    data <- bind_rows(data, fromJSON(glLedgerLinks[i]))
+  }
+  
+  # Lowercase column names
+  names(data) <- tolower(names(data))
+  
+  # Lowercase vendor info
+  data$glvendor <- tolower(data$glvendor)
+  data$glexplanation <- tolower(data$glexplanation)
+  
+  # Clean up data types
+  data$glfund <- as.factor(data$glfund)
+  data$glamount <- as.numeric(data$glamount)
+  data$gldeptno <- as.factor(data$gldeptno)
+  data$glserviceareaid <- as.factor(data$glserviceareaid)
+  data$glpo <- as.factor(data$glpo)
+  data$gldate <- as.Date(data$gldate)
+  
+  # Columns are null and can be dropped
+  
+  data$glvisadesc <- NULL
+  data$glvisacardholder <- NULL
+  
+  library(gdata)
+  data = merge(data,glServiceArea,by.x='glserviceareaid',by.y='SERVICEAREAID')
+  data$SERVICEAREANAME = trim(data$SERVICEAREANAME,'right')
+  data = merge(data,glFund,by.x='glfund',by.y='GLFUND')
+  data$GLFUND = trim(data$GLFUND,'right')
+  data = merge(data,glDepartment,by.x='gldeptno',by.y='DEPTNO')
+  data$DEPTNAME = trim(data$DEPTNAME,'right')
+  
+  return(data)
+}
+```
